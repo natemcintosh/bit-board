@@ -84,6 +84,16 @@ impl BitBoard {
             self.board.set(idx, value);
         }
     }
+
+    /// Set an entire row to a certain value
+    pub fn set_row(&mut self, row: usize, value: bool) {
+        // For each column in the row
+        for cidx in 0..self.n_cols {
+            // Calculate the index
+            let idx = (row * self.n_cols) + cidx;
+            self.board.set(idx, value);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -141,6 +151,46 @@ mod tests {
     fn row_vec_index_of(#[case] row: usize, #[case] col: usize, #[case] expected: usize) {
         let bb = BitBoard::new(1, 5);
         assert_eq!(expected, bb.index_of(row, col))
+    }
+
+    #[rstest]
+    #[case(0)]
+    #[case(1)]
+    #[case(2)]
+    #[case(3)]
+    #[case(4)]
+    fn set_col(#[case] col: usize) {
+        let mut bb = BitBoard::new(5, 5);
+        bb.set_col(col, true);
+        for ridx in 0..bb.n_rows {
+            for cidx in 0..bb.n_cols {
+                if cidx == col {
+                    assert!(bb.board[bb.index_of(ridx, cidx)])
+                } else {
+                    assert!(!bb.board[bb.index_of(ridx, cidx)])
+                }
+            }
+        }
+    }
+
+    #[rstest]
+    #[case(0)]
+    #[case(1)]
+    #[case(2)]
+    #[case(3)]
+    #[case(4)]
+    fn set_row(#[case] row: usize) {
+        let mut bb = BitBoard::new(5, 5);
+        bb.set_row(row, true);
+        for ridx in 0..bb.n_rows {
+            for cidx in 0..bb.n_cols {
+                if ridx == row {
+                    assert!(bb.board[bb.index_of(ridx, cidx)])
+                } else {
+                    assert!(!bb.board[bb.index_of(ridx, cidx)])
+                }
+            }
+        }
     }
 
     #[test]
