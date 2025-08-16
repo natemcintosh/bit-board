@@ -118,6 +118,37 @@ impl BitBoard {
             self.set(row, col + 1, value);
         }
     }
+
+    /// Set just the spots diagonal from the given position to `value`. If
+    /// the neighbor is out of bounds, nothing will happen
+    pub fn set_diagonals(&mut self, row: usize, col: usize, value: bool) {
+        // Above left
+        if row > 0 && col > 0 {
+            self.set(row - 1, col - 1, value);
+        }
+
+        // Above right
+        if row > 0 && col < self.n_cols - 1 {
+            self.set(row - 1, col + 1, value);
+        }
+
+        // Below left
+        if row < self.n_rows - 1 && col > 0 {
+            self.set(row + 1, col - 1, value);
+        }
+
+        // Below right
+        if row < self.n_rows - 1 && col < self.n_cols - 1 {
+            self.set(row + 1, col + 1, value);
+        }
+    }
+
+    /// Set the cardinal neighbors and the diagonal neighbors to `value`. If
+    /// the neighbor is out of bounds, nothing will happen
+    pub fn set_all_neighbors(&mut self, row: usize, col: usize, value: bool) {
+        self.set_cardinal_neighbors(row, col, value);
+        self.set_diagonals(row, col, value);
+    }
 }
 
 #[cfg(test)]
@@ -275,6 +306,33 @@ mod tests {
     ) {
         let mut bb = BitBoard::new(3, 3);
         bb.set_cardinal_neighbors(row, col, true);
+        assert_eq!(expect, bb);
+    }
+
+    #[rstest]
+    #[case(0, 0, BitBoard { board: bitvec![0, 1, 1, 1], n_rows: 2, n_cols: 2 })]
+    #[case(0, 1, BitBoard { board: bitvec![1, 0, 1, 1], n_rows: 2, n_cols: 2 })]
+    #[case(1, 0, BitBoard { board: bitvec![1, 1, 0, 1], n_rows: 2, n_cols: 2 })]
+    #[case(1, 1, BitBoard { board: bitvec![1, 1, 1, 0], n_rows: 2, n_cols: 2 })]
+    fn set_all_neighbors_2x2(#[case] row: usize, #[case] col: usize, #[case] expect: BitBoard) {
+        let mut bb = BitBoard::new(2, 2);
+        bb.set_all_neighbors(row, col, true);
+        assert_eq!(expect, bb);
+    }
+
+    #[rstest]
+    #[case(0, 0, BitBoard { board: bitvec![0, 1, 0, 1, 1, 0, 0, 0, 0], n_rows: 3, n_cols: 3 })]
+    #[case(0, 1, BitBoard { board: bitvec![1, 0, 1, 1, 1, 1, 0, 0, 0], n_rows: 3, n_cols: 3 })]
+    #[case(0, 2, BitBoard { board: bitvec![0, 1, 0, 0, 1, 1, 0, 0, 0], n_rows: 3, n_cols: 3 })]
+    #[case(1, 0, BitBoard { board: bitvec![1, 1, 0, 0, 1, 0, 1, 1, 0], n_rows: 3, n_cols: 3 })]
+    #[case(1, 1, BitBoard { board: bitvec![1, 1, 1, 1, 0, 1, 1, 1, 1], n_rows: 3, n_cols: 3 })]
+    #[case(1, 2, BitBoard { board: bitvec![0, 1, 1, 0, 1, 0, 0, 1, 1], n_rows: 3, n_cols: 3 })]
+    #[case(2, 0, BitBoard { board: bitvec![0, 0, 0, 1, 1, 0, 0, 1, 0], n_rows: 3, n_cols: 3 })]
+    #[case(2, 1, BitBoard { board: bitvec![0, 0, 0, 1, 1, 1, 1, 0, 1], n_rows: 3, n_cols: 3 })]
+    #[case(2, 2, BitBoard { board: bitvec![0, 0, 0, 0, 1, 1, 0, 1, 0], n_rows: 3, n_cols: 3 })]
+    fn set_all_neighbors_3x3(#[case] row: usize, #[case] col: usize, #[case] expect: BitBoard) {
+        let mut bb = BitBoard::new(3, 3);
+        bb.set_all_neighbors(row, col, true);
         assert_eq!(expect, bb);
     }
 }
