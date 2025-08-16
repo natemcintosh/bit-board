@@ -18,6 +18,5 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Build
         run: cargo build --verbose
-      - uses: taiki-e/install-action@2
-        with:
-          tool: nextest
+      - uses: taiki-e/install-action@nextest
+        run: cargo nextest run
