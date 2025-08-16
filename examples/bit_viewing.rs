@@ -1,9 +1,7 @@
-use bitvec::prelude::*;
+use bit_board::BitBoard;
 
 fn main() {
-    let data = 0x1u16;
-    let lsb_bits = data.view_bits::<Lsb0>();
-    let msb_bits = data.view_bits::<Msb0>();
-    println!("{}", lsb_bits);
-    println!("{}", msb_bits);
+    let mut bb = BitBoard::new(4, 13);
+    bb.set(0, 0, true);
+    println!("{bb}");
 }

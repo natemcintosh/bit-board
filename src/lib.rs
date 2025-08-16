@@ -1,3 +1,5 @@
+use std::fmt;
+
 use bitvec::prelude::*;
 
 /// BitBoard is a 2D array of booleans, stored in the bits of integers. It does
@@ -6,7 +8,7 @@ use bitvec::prelude::*;
 #[derive(Debug, Clone)]
 pub struct BitBoard {
     // The slice of bits that represent the board.
-    board: BitVec,
+    pub board: BitVec,
 
     /// How many rows does the board have
     pub n_rows: usize,
@@ -15,11 +17,35 @@ pub struct BitBoard {
     pub n_cols: usize,
 }
 
+impl fmt::Display for BitBoard {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // column indices
+        write!(f, "   ")?; // space for row labels
+        for col in 0..self.n_cols {
+            write!(f, "{}", col % 10)?; // wrap every 10 for readability
+        }
+        writeln!(f)?;
+
+        for row in 0..self.n_rows {
+            // row index, right-aligned to 2 spaces
+            write!(f, "{:>2} ", row)?;
+            for col in 0..self.n_cols {
+                let idx = row * self.n_cols + col;
+                let bit = self.board[idx];
+                let c = if bit { 'X' } else { '.' };
+                write!(f, "{}", c)?;
+            }
+            writeln!(f)?;
+        }
+        Ok(())
+    }
+}
+
 impl BitBoard {
     /// Create a new board with `n_rows` and `n_cols`.
     pub fn new(n_rows: usize, n_cols: usize) -> Self {
         BitBoard {
-            board: BitVec::with_capacity(n_rows * n_cols),
+            board: bitvec![0; n_rows * n_cols],
             n_rows,
             n_cols,
         }
@@ -38,10 +64,25 @@ impl BitBoard {
         (row * self.n_cols) + col
     }
 
+    /// Set all bits to the desired value.
+    pub fn fill(&mut self, value: bool) {
+        self.board.fill(value);
+    }
+
     /// Set the value at index [row, col] to be the `new_val`.
-    pub fn set(mut self, row: usize, col: usize, value: bool) {
+    pub fn set(&mut self, row: usize, col: usize, value: bool) {
         let new_ind = self.index_of(row, col);
         self.board.set(new_ind, value);
+    }
+
+    /// Set an entire column to a certain value
+    pub fn set_col(&mut self, col: usize, value: bool) {
+        // For each row
+        for r_idx in 0..self.n_rows {
+            // Calculate the index
+            let idx = (r_idx * self.n_cols) + col;
+            self.board.set(idx, value);
+        }
     }
 }
 
@@ -100,5 +141,31 @@ mod tests {
     fn row_vec_index_of(#[case] row: usize, #[case] col: usize, #[case] expected: usize) {
         let bb = BitBoard::new(1, 5);
         assert_eq!(expected, bb.index_of(row, col))
+    }
+
+    #[test]
+    fn can_set_all_bits() {
+        // Create the board
+        let nr = 3;
+        let nc = 3;
+        let mut bb = BitBoard::new(nr, nc);
+
+        bb.set(0, 0, true);
+
+        // Set each bit, and check that all bits are 1
+        for ridx in 0..nr {
+            for cidx in 0..nc {
+                bb.set(ridx, cidx, true);
+            }
+        }
+        assert!(bb.board.all());
+
+        // Unset each bit, and check that all bits are 0
+        for ridx in 0..nr {
+            for cidx in 0..nc {
+                bb.set(ridx, cidx, false);
+            }
+        }
+        assert!(bb.board.not_any());
     }
 }
