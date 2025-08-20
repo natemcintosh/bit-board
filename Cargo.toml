@@ -2,7 +2,7 @@
 name = "bit-board"
 version = "0.1.1"
 edition = "2024"
-description = "A library for bitboard (2D bit array) operations"
+description = "A lightweight wrapper over bitvec for 2D bit array operations"
 license = "MIT"
 
 [dependencies]
