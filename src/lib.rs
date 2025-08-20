@@ -459,24 +459,24 @@ mod tests {
 
         // Test AND operation
         let and_result = bb1.and(&bb2).unwrap();
-        assert_eq!(and_result.board[0], true); // (0,0) - both have true
-        assert_eq!(and_result.board[1], false); // (0,1) - only bb1 has true
-        assert_eq!(and_result.board[2], false); // (0,2) - only bb1 has true
-        assert_eq!(and_result.board[3], false); // (1,0) - only bb2 has true
-        assert_eq!(and_result.board[4], false); // (1,1) - only bb2 has true
-        assert_eq!(and_result.board[6], false); // (2,0) - only bb2 has true
+        assert!(and_result.board[0]); // (0,0) - both have true
+        assert!(!and_result.board[1]); // (0,1) - only bb1 has true
+        assert!(!and_result.board[2]); // (0,2) - only bb1 has true
+        assert!(!and_result.board[3]); // (1,0) - only bb2 has true
+        assert!(!and_result.board[4]); // (1,1) - only bb2 has true
+        assert!(!and_result.board[6]); // (2,0) - only bb2 has true
 
         // Test OR operation
         let or_result = bb1.or(&bb2).unwrap();
-        assert_eq!(or_result.board[0], true); // (0,0) - both have true
-        assert_eq!(or_result.board[1], true); // (0,1) - bb1 has true
-        assert_eq!(or_result.board[2], true); // (0,2) - bb1 has true
-        assert_eq!(or_result.board[3], true); // (1,0) - bb2 has true
-        assert_eq!(or_result.board[4], true); // (1,1) - bb2 has true
-        assert_eq!(or_result.board[5], false); // (1,2) - neither has true
-        assert_eq!(or_result.board[6], true); // (2,0) - bb2 has true
-        assert_eq!(or_result.board[7], false); // (2,1) - neither has true
-        assert_eq!(or_result.board[8], true); // (2,2) - bb1 has true
+        assert!(or_result.board[0]); // (0,0) - both have true
+        assert!(or_result.board[1]); // (0,1) - bb1 has true
+        assert!(or_result.board[2]); // (0,2) - bb1 has true
+        assert!(or_result.board[3]); // (1,0) - bb2 has true
+        assert!(or_result.board[4]); // (1,1) - bb2 has true
+        assert!(!or_result.board[5]); // (1,2) - neither has true
+        assert!(or_result.board[6]); // (2,0) - bb2 has true
+        assert!(!or_result.board[7]); // (2,1) - neither has true
+        assert!(or_result.board[8]); // (2,2) - bb1 has true
     }
 
     #[test]

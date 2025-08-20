@@ -1,2 +1,2 @@
 # bit-board
-A data structure to represent 2D boards of booleans with bit masks
+A light weight wrapper around `bitvec` to represent 2D boards of booleans with bit masks.
