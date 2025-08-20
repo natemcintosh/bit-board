@@ -1,6 +1,18 @@
+use std::error::Error;
 use std::fmt;
 
 use bitvec::prelude::*;
+
+#[derive(Debug)]
+pub struct DimensionMismatch;
+
+impl fmt::Display for DimensionMismatch {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Dimensions do not match.")
+    }
+}
+
+impl Error for DimensionMismatch {}
 
 /// BitBoard is a 2D array of booleans, stored in the bits of integers. It does
 /// assumes that the boundaries are hard, and going past a boundary does *not* take
@@ -42,7 +54,7 @@ impl fmt::Display for BitBoard {
 }
 
 impl BitBoard {
-    /// Create a new board with `n_rows` and `n_cols`.
+    /// Create a new empty board with `n_rows` and `n_cols`.
     pub fn new(n_rows: usize, n_cols: usize) -> Self {
         BitBoard {
             board: bitvec![0; n_rows * n_cols],
@@ -67,6 +79,24 @@ impl BitBoard {
     /// Set all bits to the desired value.
     pub fn fill(&mut self, value: bool) {
         self.board.fill(value);
+    }
+
+    pub fn or(&self, other: &BitBoard) -> Result<BitBoard, DimensionMismatch> {
+        if (self.n_rows != other.n_rows) || (self.n_cols != other.n_cols) {
+            return Err(DimensionMismatch);
+        }
+        let mut new_board = BitBoard::new(self.n_rows, self.n_cols);
+        new_board.board = self.board.clone() | other.board.clone();
+        Ok(new_board)
+    }
+
+    pub fn and(&self, other: &BitBoard) -> Result<BitBoard, DimensionMismatch> {
+        if (self.n_rows != other.n_rows) || (self.n_cols != other.n_cols) {
+            return Err(DimensionMismatch);
+        }
+        let mut new_board = BitBoard::new(self.n_rows, self.n_cols);
+        new_board.board = self.board.clone() & other.board.clone();
+        Ok(new_board)
     }
 
     /// Set the value at index [row, col] to be the `new_val`.
@@ -334,5 +364,137 @@ mod tests {
         let mut bb = BitBoard::new(3, 3);
         bb.set_all_neighbors(row, col, true);
         assert_eq!(expect, bb);
+    }
+
+    #[rstest]
+    #[case(1, 1, 1, 2)]
+    #[case(2, 1, 1, 2)]
+    #[case(2, 1, 2, 7)]
+    fn and_dimension_mismatch(
+        #[case] b1r: usize,
+        #[case] b1c: usize,
+        #[case] b2r: usize,
+        #[case] b2c: usize,
+    ) {
+        let bb1 = BitBoard::new(b1r, b1c);
+        let bb8 = BitBoard::new(b2r, b2c);
+        assert!(bb1.and(&bb8).is_err());
+    }
+
+    #[rstest]
+    #[case(1, 1, 1, 2)]
+    #[case(2, 1, 1, 2)]
+    #[case(2, 1, 2, 7)]
+    fn or_dimension_mismatch(
+        #[case] b1r: usize,
+        #[case] b1c: usize,
+        #[case] b2r: usize,
+        #[case] b2c: usize,
+    ) {
+        let bb1 = BitBoard::new(b1r, b1c);
+        let bb8 = BitBoard::new(b2r, b2c);
+        assert!(bb1.or(&bb8).is_err());
+    }
+
+    #[rstest]
+    #[case(bitvec![0, 0, 0, 0], bitvec![0, 0, 0, 0], bitvec![0, 0, 0, 0])] // empty AND empty
+    #[case(bitvec![1, 1, 1, 1], bitvec![1, 1, 1, 1], bitvec![1, 1, 1, 1])] // full AND full
+    #[case(bitvec![0, 0, 0, 0], bitvec![1, 1, 1, 1], bitvec![0, 0, 0, 0])] // empty AND full
+    #[case(bitvec![1, 1, 1, 1], bitvec![1, 0, 0, 1], bitvec![1, 0, 0, 1])] // full AND partial
+    #[case(bitvec![1, 0, 1, 0], bitvec![0, 1, 0, 1], bitvec![0, 0, 0, 0])] // alternating patterns
+    #[case(bitvec![1, 1, 0, 0], bitvec![1, 0, 1, 0], bitvec![1, 0, 0, 0])] // partial patterns
+    fn and_operations(#[case] board1: BitVec, #[case] board2: BitVec, #[case] expected: BitVec) {
+        let bb1 = BitBoard {
+            board: board1,
+            n_rows: 2,
+            n_cols: 2,
+        };
+        let bb2 = BitBoard {
+            board: board2,
+            n_rows: 2,
+            n_cols: 2,
+        };
+
+        let result = bb1.and(&bb2).unwrap();
+        assert_eq!(result.board, expected);
+        assert_eq!(result.n_rows, 2);
+        assert_eq!(result.n_cols, 2);
+    }
+
+    #[rstest]
+    #[case(bitvec![0, 0, 0, 0], bitvec![0, 0, 0, 0], bitvec![0, 0, 0, 0])] // empty OR empty
+    #[case(bitvec![1, 1, 1, 1], bitvec![1, 1, 1, 1], bitvec![1, 1, 1, 1])] // full OR full
+    #[case(bitvec![0, 0, 0, 0], bitvec![1, 1, 1, 1], bitvec![1, 1, 1, 1])] // empty OR full
+    #[case(bitvec![0, 0, 0, 0], bitvec![1, 0, 0, 1], bitvec![1, 0, 0, 1])] // empty OR partial
+    #[case(bitvec![1, 0, 1, 0], bitvec![0, 1, 0, 1], bitvec![1, 1, 1, 1])] // alternating patterns
+    #[case(bitvec![1, 1, 0, 0], bitvec![0, 0, 1, 1], bitvec![1, 1, 1, 1])] // complementary patterns
+    #[case(bitvec![1, 0, 0, 1], bitvec![0, 1, 1, 0], bitvec![1, 1, 1, 1])] // diagonal patterns
+    fn or_operations(#[case] board1: BitVec, #[case] board2: BitVec, #[case] expected: BitVec) {
+        let bb1 = BitBoard {
+            board: board1,
+            n_rows: 2,
+            n_cols: 2,
+        };
+        let bb2 = BitBoard {
+            board: board2,
+            n_rows: 2,
+            n_cols: 2,
+        };
+
+        let result = bb1.or(&bb2).unwrap();
+        assert_eq!(result.board, expected);
+        assert_eq!(result.n_rows, 2);
+        assert_eq!(result.n_cols, 2);
+    }
+
+    #[test]
+    fn and_or_larger_boards() {
+        let mut bb1 = BitBoard::new(3, 3);
+        bb1.set_row(0, true); // First row all true
+        bb1.set(2, 2, true); // Bottom right corner
+
+        let mut bb2 = BitBoard::new(3, 3);
+        bb2.set_col(0, true); // First column all true
+        bb2.set(1, 1, true); // Center
+
+        // Test AND operation
+        let and_result = bb1.and(&bb2).unwrap();
+        assert_eq!(and_result.board[0], true); // (0,0) - both have true
+        assert_eq!(and_result.board[1], false); // (0,1) - only bb1 has true
+        assert_eq!(and_result.board[2], false); // (0,2) - only bb1 has true
+        assert_eq!(and_result.board[3], false); // (1,0) - only bb2 has true
+        assert_eq!(and_result.board[4], false); // (1,1) - only bb2 has true
+        assert_eq!(and_result.board[6], false); // (2,0) - only bb2 has true
+
+        // Test OR operation
+        let or_result = bb1.or(&bb2).unwrap();
+        assert_eq!(or_result.board[0], true); // (0,0) - both have true
+        assert_eq!(or_result.board[1], true); // (0,1) - bb1 has true
+        assert_eq!(or_result.board[2], true); // (0,2) - bb1 has true
+        assert_eq!(or_result.board[3], true); // (1,0) - bb2 has true
+        assert_eq!(or_result.board[4], true); // (1,1) - bb2 has true
+        assert_eq!(or_result.board[5], false); // (1,2) - neither has true
+        assert_eq!(or_result.board[6], true); // (2,0) - bb2 has true
+        assert_eq!(or_result.board[7], false); // (2,1) - neither has true
+        assert_eq!(or_result.board[8], true); // (2,2) - bb1 has true
+    }
+
+    #[test]
+    fn and_or_preserve_original_boards() {
+        let mut bb1 = BitBoard::new(2, 2);
+        bb1.set(0, 0, true);
+        let bb1_original = bb1.clone();
+
+        let mut bb2 = BitBoard::new(2, 2);
+        bb2.set(1, 1, true);
+        let bb2_original = bb2.clone();
+
+        // Perform operations
+        let _and_result = bb1.and(&bb2).unwrap();
+        let _or_result = bb1.or(&bb2).unwrap();
+
+        // Original boards should be unchanged
+        assert_eq!(bb1, bb1_original);
+        assert_eq!(bb2, bb2_original);
     }
 }
