@@ -18,7 +18,7 @@ impl Error for DimensionMismatch {}
 /// assumes that the boundaries are hard, and going past a boundary does *not* take
 /// you back to the other side.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct BitBoard {
+pub struct BitBoardDyn {
     // The slice of bits that represent the board.
     pub board: BitVec,
 
@@ -29,7 +29,7 @@ pub struct BitBoard {
     pub n_cols: usize,
 }
 
-impl fmt::Display for BitBoard {
+impl fmt::Display for BitBoardDyn {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // column indices
         write!(f, "   ")?; // space for row labels
@@ -53,10 +53,10 @@ impl fmt::Display for BitBoard {
     }
 }
 
-impl BitBoard {
+impl BitBoardDyn {
     /// Create a new empty board with `n_rows` and `n_cols`.
     pub fn new(n_rows: usize, n_cols: usize) -> Self {
-        BitBoard {
+        BitBoardDyn {
             board: bitvec![0; n_rows * n_cols],
             n_rows,
             n_cols,
@@ -81,20 +81,20 @@ impl BitBoard {
         self.board.fill(value);
     }
 
-    pub fn or(&self, other: &BitBoard) -> Result<BitBoard, DimensionMismatch> {
+    pub fn or(&self, other: &BitBoardDyn) -> Result<BitBoardDyn, DimensionMismatch> {
         if (self.n_rows != other.n_rows) || (self.n_cols != other.n_cols) {
             return Err(DimensionMismatch);
         }
-        let mut new_board = BitBoard::new(self.n_rows, self.n_cols);
+        let mut new_board = BitBoardDyn::new(self.n_rows, self.n_cols);
         new_board.board = self.board.clone() | other.board.clone();
         Ok(new_board)
     }
 
-    pub fn and(&self, other: &BitBoard) -> Result<BitBoard, DimensionMismatch> {
+    pub fn and(&self, other: &BitBoardDyn) -> Result<BitBoardDyn, DimensionMismatch> {
         if (self.n_rows != other.n_rows) || (self.n_cols != other.n_cols) {
             return Err(DimensionMismatch);
         }
-        let mut new_board = BitBoard::new(self.n_rows, self.n_cols);
+        let mut new_board = BitBoardDyn::new(self.n_rows, self.n_cols);
         new_board.board = self.board.clone() & other.board.clone();
         Ok(new_board)
     }
@@ -188,21 +188,21 @@ mod tests {
 
     #[test]
     fn can_construct() {
-        let bb = BitBoard::new(2, 2);
+        let bb = BitBoardDyn::new(2, 2);
         println!("{:?}", bb);
     }
 
     #[test]
     #[should_panic(expected = "row cannot be greater than n_rows")]
     fn row_too_big() {
-        let bb = BitBoard::new(2, 2);
+        let bb = BitBoardDyn::new(2, 2);
         bb.index_of(10, 0);
     }
 
     #[test]
     #[should_panic(expected = "col cannot be greater than n_col")]
     fn col_too_big() {
-        let bb = BitBoard::new(2, 2);
+        let bb = BitBoardDyn::new(2, 2);
         bb.index_of(0, 10);
     }
 
@@ -212,7 +212,7 @@ mod tests {
     #[case(1, 0, 2)]
     #[case(1, 1, 3)]
     fn index_of(#[case] row: usize, #[case] col: usize, #[case] expected: usize) {
-        let bb = BitBoard::new(2, 2);
+        let bb = BitBoardDyn::new(2, 2);
         assert_eq!(expected, bb.index_of(row, col))
     }
 
@@ -223,7 +223,7 @@ mod tests {
     #[case(3, 0, 3)]
     #[case(4, 0, 4)]
     fn col_vec_index_of(#[case] row: usize, #[case] col: usize, #[case] expected: usize) {
-        let bb = BitBoard::new(5, 1);
+        let bb = BitBoardDyn::new(5, 1);
         assert_eq!(expected, bb.index_of(row, col))
     }
 
@@ -234,7 +234,7 @@ mod tests {
     #[case(0, 3, 3)]
     #[case(0, 4, 4)]
     fn row_vec_index_of(#[case] row: usize, #[case] col: usize, #[case] expected: usize) {
-        let bb = BitBoard::new(1, 5);
+        let bb = BitBoardDyn::new(1, 5);
         assert_eq!(expected, bb.index_of(row, col))
     }
 
@@ -245,7 +245,7 @@ mod tests {
     #[case(3)]
     #[case(4)]
     fn set_col(#[case] col: usize) {
-        let mut bb = BitBoard::new(5, 5);
+        let mut bb = BitBoardDyn::new(5, 5);
         bb.set_col(col, true);
         for ridx in 0..bb.n_rows {
             for cidx in 0..bb.n_cols {
@@ -265,7 +265,7 @@ mod tests {
     #[case(3)]
     #[case(4)]
     fn set_row(#[case] row: usize) {
-        let mut bb = BitBoard::new(5, 5);
+        let mut bb = BitBoardDyn::new(5, 5);
         bb.set_row(row, true);
         for ridx in 0..bb.n_rows {
             for cidx in 0..bb.n_cols {
@@ -283,7 +283,7 @@ mod tests {
         // Create the board
         let nr = 3;
         let nc = 3;
-        let mut bb = BitBoard::new(nr, nc);
+        let mut bb = BitBoardDyn::new(nr, nc);
 
         bb.set(0, 0, true);
 
@@ -305,63 +305,63 @@ mod tests {
     }
 
     #[rstest]
-    #[case(0, 0, BitBoard { board: bitvec![0, 1, 1, 0], n_rows: 2, n_cols: 2 })]
-    #[case(0, 1, BitBoard { board: bitvec![1, 0, 0, 1], n_rows: 2, n_cols: 2 })]
-    #[case(1, 0, BitBoard { board: bitvec![1, 0, 0, 1], n_rows: 2, n_cols: 2 })]
-    #[case(1, 1, BitBoard { board: bitvec![0, 1, 1, 0], n_rows: 2, n_cols: 2 })]
+    #[case(0, 0, BitBoardDyn { board: bitvec![0, 1, 1, 0], n_rows: 2, n_cols: 2 })]
+    #[case(0, 1, BitBoardDyn { board: bitvec![1, 0, 0, 1], n_rows: 2, n_cols: 2 })]
+    #[case(1, 0, BitBoardDyn { board: bitvec![1, 0, 0, 1], n_rows: 2, n_cols: 2 })]
+    #[case(1, 1, BitBoardDyn { board: bitvec![0, 1, 1, 0], n_rows: 2, n_cols: 2 })]
     fn set_caridnal_neighbors_2x2(
         #[case] row: usize,
         #[case] col: usize,
-        #[case] expect: BitBoard,
+        #[case] expect: BitBoardDyn,
     ) {
-        let mut bb = BitBoard::new(2, 2);
+        let mut bb = BitBoardDyn::new(2, 2);
         bb.set_cardinal_neighbors(row, col, true);
         assert_eq!(expect, bb);
     }
 
     #[rstest]
-    #[case(0, 0, BitBoard { board: bitvec![0, 1, 0, 1, 0, 0, 0, 0, 0], n_rows: 3, n_cols: 3 })]
-    #[case(0, 1, BitBoard { board: bitvec![1, 0, 1, 0, 1, 0, 0, 0, 0], n_rows: 3, n_cols: 3 })]
-    #[case(0, 2, BitBoard { board: bitvec![0, 1, 0, 0, 0, 1, 0, 0, 0], n_rows: 3, n_cols: 3 })]
-    #[case(1, 0, BitBoard { board: bitvec![1, 0, 0, 0, 1, 0, 1, 0, 0], n_rows: 3, n_cols: 3 })]
-    #[case(1, 1, BitBoard { board: bitvec![0, 1, 0, 1, 0, 1, 0, 1, 0], n_rows: 3, n_cols: 3 })]
-    #[case(1, 2, BitBoard { board: bitvec![0, 0, 1, 0, 1, 0, 0, 0, 1], n_rows: 3, n_cols: 3 })]
-    #[case(2, 0, BitBoard { board: bitvec![0, 0, 0, 1, 0, 0, 0, 1, 0], n_rows: 3, n_cols: 3 })]
-    #[case(2, 1, BitBoard { board: bitvec![0, 0, 0, 0, 1, 0, 1, 0, 1], n_rows: 3, n_cols: 3 })]
-    #[case(2, 2, BitBoard { board: bitvec![0, 0, 0, 0, 0, 1, 0, 1, 0], n_rows: 3, n_cols: 3 })]
+    #[case(0, 0, BitBoardDyn { board: bitvec![0, 1, 0, 1, 0, 0, 0, 0, 0], n_rows: 3, n_cols: 3 })]
+    #[case(0, 1, BitBoardDyn { board: bitvec![1, 0, 1, 0, 1, 0, 0, 0, 0], n_rows: 3, n_cols: 3 })]
+    #[case(0, 2, BitBoardDyn { board: bitvec![0, 1, 0, 0, 0, 1, 0, 0, 0], n_rows: 3, n_cols: 3 })]
+    #[case(1, 0, BitBoardDyn { board: bitvec![1, 0, 0, 0, 1, 0, 1, 0, 0], n_rows: 3, n_cols: 3 })]
+    #[case(1, 1, BitBoardDyn { board: bitvec![0, 1, 0, 1, 0, 1, 0, 1, 0], n_rows: 3, n_cols: 3 })]
+    #[case(1, 2, BitBoardDyn { board: bitvec![0, 0, 1, 0, 1, 0, 0, 0, 1], n_rows: 3, n_cols: 3 })]
+    #[case(2, 0, BitBoardDyn { board: bitvec![0, 0, 0, 1, 0, 0, 0, 1, 0], n_rows: 3, n_cols: 3 })]
+    #[case(2, 1, BitBoardDyn { board: bitvec![0, 0, 0, 0, 1, 0, 1, 0, 1], n_rows: 3, n_cols: 3 })]
+    #[case(2, 2, BitBoardDyn { board: bitvec![0, 0, 0, 0, 0, 1, 0, 1, 0], n_rows: 3, n_cols: 3 })]
     fn set_caridnal_neighbors_3x3(
         #[case] row: usize,
         #[case] col: usize,
-        #[case] expect: BitBoard,
+        #[case] expect: BitBoardDyn,
     ) {
-        let mut bb = BitBoard::new(3, 3);
+        let mut bb = BitBoardDyn::new(3, 3);
         bb.set_cardinal_neighbors(row, col, true);
         assert_eq!(expect, bb);
     }
 
     #[rstest]
-    #[case(0, 0, BitBoard { board: bitvec![0, 1, 1, 1], n_rows: 2, n_cols: 2 })]
-    #[case(0, 1, BitBoard { board: bitvec![1, 0, 1, 1], n_rows: 2, n_cols: 2 })]
-    #[case(1, 0, BitBoard { board: bitvec![1, 1, 0, 1], n_rows: 2, n_cols: 2 })]
-    #[case(1, 1, BitBoard { board: bitvec![1, 1, 1, 0], n_rows: 2, n_cols: 2 })]
-    fn set_all_neighbors_2x2(#[case] row: usize, #[case] col: usize, #[case] expect: BitBoard) {
-        let mut bb = BitBoard::new(2, 2);
+    #[case(0, 0, BitBoardDyn { board: bitvec![0, 1, 1, 1], n_rows: 2, n_cols: 2 })]
+    #[case(0, 1, BitBoardDyn { board: bitvec![1, 0, 1, 1], n_rows: 2, n_cols: 2 })]
+    #[case(1, 0, BitBoardDyn { board: bitvec![1, 1, 0, 1], n_rows: 2, n_cols: 2 })]
+    #[case(1, 1, BitBoardDyn { board: bitvec![1, 1, 1, 0], n_rows: 2, n_cols: 2 })]
+    fn set_all_neighbors_2x2(#[case] row: usize, #[case] col: usize, #[case] expect: BitBoardDyn) {
+        let mut bb = BitBoardDyn::new(2, 2);
         bb.set_all_neighbors(row, col, true);
         assert_eq!(expect, bb);
     }
 
     #[rstest]
-    #[case(0, 0, BitBoard { board: bitvec![0, 1, 0, 1, 1, 0, 0, 0, 0], n_rows: 3, n_cols: 3 })]
-    #[case(0, 1, BitBoard { board: bitvec![1, 0, 1, 1, 1, 1, 0, 0, 0], n_rows: 3, n_cols: 3 })]
-    #[case(0, 2, BitBoard { board: bitvec![0, 1, 0, 0, 1, 1, 0, 0, 0], n_rows: 3, n_cols: 3 })]
-    #[case(1, 0, BitBoard { board: bitvec![1, 1, 0, 0, 1, 0, 1, 1, 0], n_rows: 3, n_cols: 3 })]
-    #[case(1, 1, BitBoard { board: bitvec![1, 1, 1, 1, 0, 1, 1, 1, 1], n_rows: 3, n_cols: 3 })]
-    #[case(1, 2, BitBoard { board: bitvec![0, 1, 1, 0, 1, 0, 0, 1, 1], n_rows: 3, n_cols: 3 })]
-    #[case(2, 0, BitBoard { board: bitvec![0, 0, 0, 1, 1, 0, 0, 1, 0], n_rows: 3, n_cols: 3 })]
-    #[case(2, 1, BitBoard { board: bitvec![0, 0, 0, 1, 1, 1, 1, 0, 1], n_rows: 3, n_cols: 3 })]
-    #[case(2, 2, BitBoard { board: bitvec![0, 0, 0, 0, 1, 1, 0, 1, 0], n_rows: 3, n_cols: 3 })]
-    fn set_all_neighbors_3x3(#[case] row: usize, #[case] col: usize, #[case] expect: BitBoard) {
-        let mut bb = BitBoard::new(3, 3);
+    #[case(0, 0, BitBoardDyn { board: bitvec![0, 1, 0, 1, 1, 0, 0, 0, 0], n_rows: 3, n_cols: 3 })]
+    #[case(0, 1, BitBoardDyn { board: bitvec![1, 0, 1, 1, 1, 1, 0, 0, 0], n_rows: 3, n_cols: 3 })]
+    #[case(0, 2, BitBoardDyn { board: bitvec![0, 1, 0, 0, 1, 1, 0, 0, 0], n_rows: 3, n_cols: 3 })]
+    #[case(1, 0, BitBoardDyn { board: bitvec![1, 1, 0, 0, 1, 0, 1, 1, 0], n_rows: 3, n_cols: 3 })]
+    #[case(1, 1, BitBoardDyn { board: bitvec![1, 1, 1, 1, 0, 1, 1, 1, 1], n_rows: 3, n_cols: 3 })]
+    #[case(1, 2, BitBoardDyn { board: bitvec![0, 1, 1, 0, 1, 0, 0, 1, 1], n_rows: 3, n_cols: 3 })]
+    #[case(2, 0, BitBoardDyn { board: bitvec![0, 0, 0, 1, 1, 0, 0, 1, 0], n_rows: 3, n_cols: 3 })]
+    #[case(2, 1, BitBoardDyn { board: bitvec![0, 0, 0, 1, 1, 1, 1, 0, 1], n_rows: 3, n_cols: 3 })]
+    #[case(2, 2, BitBoardDyn { board: bitvec![0, 0, 0, 0, 1, 1, 0, 1, 0], n_rows: 3, n_cols: 3 })]
+    fn set_all_neighbors_3x3(#[case] row: usize, #[case] col: usize, #[case] expect: BitBoardDyn) {
+        let mut bb = BitBoardDyn::new(3, 3);
         bb.set_all_neighbors(row, col, true);
         assert_eq!(expect, bb);
     }
@@ -376,8 +376,8 @@ mod tests {
         #[case] b2r: usize,
         #[case] b2c: usize,
     ) {
-        let bb1 = BitBoard::new(b1r, b1c);
-        let bb8 = BitBoard::new(b2r, b2c);
+        let bb1 = BitBoardDyn::new(b1r, b1c);
+        let bb8 = BitBoardDyn::new(b2r, b2c);
         assert!(bb1.and(&bb8).is_err());
     }
 
@@ -391,8 +391,8 @@ mod tests {
         #[case] b2r: usize,
         #[case] b2c: usize,
     ) {
-        let bb1 = BitBoard::new(b1r, b1c);
-        let bb8 = BitBoard::new(b2r, b2c);
+        let bb1 = BitBoardDyn::new(b1r, b1c);
+        let bb8 = BitBoardDyn::new(b2r, b2c);
         assert!(bb1.or(&bb8).is_err());
     }
 
@@ -404,12 +404,12 @@ mod tests {
     #[case(bitvec![1, 0, 1, 0], bitvec![0, 1, 0, 1], bitvec![0, 0, 0, 0])] // alternating patterns
     #[case(bitvec![1, 1, 0, 0], bitvec![1, 0, 1, 0], bitvec![1, 0, 0, 0])] // partial patterns
     fn and_operations(#[case] board1: BitVec, #[case] board2: BitVec, #[case] expected: BitVec) {
-        let bb1 = BitBoard {
+        let bb1 = BitBoardDyn {
             board: board1,
             n_rows: 2,
             n_cols: 2,
         };
-        let bb2 = BitBoard {
+        let bb2 = BitBoardDyn {
             board: board2,
             n_rows: 2,
             n_cols: 2,
@@ -430,12 +430,12 @@ mod tests {
     #[case(bitvec![1, 1, 0, 0], bitvec![0, 0, 1, 1], bitvec![1, 1, 1, 1])] // complementary patterns
     #[case(bitvec![1, 0, 0, 1], bitvec![0, 1, 1, 0], bitvec![1, 1, 1, 1])] // diagonal patterns
     fn or_operations(#[case] board1: BitVec, #[case] board2: BitVec, #[case] expected: BitVec) {
-        let bb1 = BitBoard {
+        let bb1 = BitBoardDyn {
             board: board1,
             n_rows: 2,
             n_cols: 2,
         };
-        let bb2 = BitBoard {
+        let bb2 = BitBoardDyn {
             board: board2,
             n_rows: 2,
             n_cols: 2,
@@ -449,11 +449,11 @@ mod tests {
 
     #[test]
     fn and_or_larger_boards() {
-        let mut bb1 = BitBoard::new(3, 3);
+        let mut bb1 = BitBoardDyn::new(3, 3);
         bb1.set_row(0, true); // First row all true
         bb1.set(2, 2, true); // Bottom right corner
 
-        let mut bb2 = BitBoard::new(3, 3);
+        let mut bb2 = BitBoardDyn::new(3, 3);
         bb2.set_col(0, true); // First column all true
         bb2.set(1, 1, true); // Center
 
@@ -481,11 +481,11 @@ mod tests {
 
     #[test]
     fn and_or_preserve_original_boards() {
-        let mut bb1 = BitBoard::new(2, 2);
+        let mut bb1 = BitBoardDyn::new(2, 2);
         bb1.set(0, 0, true);
         let bb1_original = bb1.clone();
 
-        let mut bb2 = BitBoard::new(2, 2);
+        let mut bb2 = BitBoardDyn::new(2, 2);
         bb2.set(1, 1, true);
         let bb2_original = bb2.clone();
 
