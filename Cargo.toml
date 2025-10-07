@@ -5,6 +5,7 @@ edition = "2024"
 description = "A lightweight wrapper over bitvec for 2D bit array operations"
 license = "MIT"
 readme = "README.md"
+repository = "https://github.com/natemcintosh/bit-board"
 
 [dependencies]
 bitvec = "1"
