@@ -10,7 +10,10 @@ pub trait BitBoard {
     fn n_cols(&self) -> usize;
 
     /// Returns a mutable reference to the underlying bits.
-    fn board(&mut self) -> &mut BitSlice;
+    fn board_mut(&mut self) -> &mut BitSlice;
+
+    /// Returns an immutable reference to the underlying bits.
+    fn board(&self) -> &BitSlice;
 
     /// Get the index that we can use to directly access a certain spot on the board
     fn index_of(&self, row: usize, col: usize) -> usize {
@@ -27,7 +30,7 @@ pub trait BitBoard {
 
     /// Set all bits to the desired value.
     fn fill(&mut self, value: bool) {
-        self.board().fill(value);
+        self.board_mut().fill(value);
     }
 
     fn or(&self, other: &impl BitBoard) -> Result<impl BitBoard, DimensionMismatch>;
@@ -36,7 +39,7 @@ pub trait BitBoard {
     /// Set the value at index [row, col] to be the `new_val`.
     fn set(&mut self, row: usize, col: usize, value: bool) {
         let new_ind = self.index_of(row, col);
-        self.board().set(new_ind, value);
+        self.board_mut().set(new_ind, value);
     }
     /// Set an entire column to a certain value
     fn set_col(&mut self, col: usize, value: bool) {
@@ -44,7 +47,7 @@ pub trait BitBoard {
         for r_idx in 0..self.n_rows() {
             // Calculate the index
             let idx = (r_idx * self.n_cols()) + col;
-            self.board().set(idx, value);
+            self.board_mut().set(idx, value);
         }
     }
 
@@ -54,7 +57,7 @@ pub trait BitBoard {
         for cidx in 0..self.n_cols() {
             // Calculate the index
             let idx = (row * self.n_cols()) + cidx;
-            self.board().set(idx, value);
+            self.board_mut().set(idx, value);
         }
     }
 
