@@ -1,4 +1,5 @@
-use bit_board::BitBoardDyn;
+use bit_board::bitboard::BitBoard;
+use bit_board::bitboarddyn::BitBoardDyn;
 
 fn main() {
     let mut bb = BitBoardDyn::new(4, 13);
