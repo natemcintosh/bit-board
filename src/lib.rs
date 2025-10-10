@@ -3,6 +3,7 @@ use std::fmt;
 
 pub mod bitboard;
 pub mod bitboarddyn;
+pub mod bitboardstatic;
 
 #[derive(Debug)]
 pub struct DimensionMismatch;

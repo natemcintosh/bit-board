@@ -1,16 +1,14 @@
 use std::fmt;
+use std::ops::{BitAndAssign, BitOrAssign};
 
 use bitvec::prelude::*;
 
 use crate::{DimensionMismatch, bitboard::BitBoard};
 
-/// BitBoard is a 2D array of booleans, stored in the bits of integers. It does
-/// assumes that the boundaries are hard, and going past a boundary does *not* take
-/// you back to the other side.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct BitBoardDyn {
-    /// The slice of bits that represent the board.
-    pub board: BitVec,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BitBoardStatic<const W: usize> {
+    /// The statically sized array of `W` words.
+    board: BitArray<[usize; W]>,
 
     /// How many rows does the board have
     pub n_rows: usize,
@@ -19,7 +17,7 @@ pub struct BitBoardDyn {
     pub n_cols: usize,
 }
 
-impl fmt::Display for BitBoardDyn {
+impl<const W: usize> fmt::Display for BitBoardStatic<W> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // column indices
         write!(f, "   ")?; // space for row labels
@@ -43,7 +41,29 @@ impl fmt::Display for BitBoardDyn {
     }
 }
 
-impl BitBoard for BitBoardDyn {
+// W is the number of usize integers needed to hold the board
+impl<const W: usize> BitBoardStatic<W> {
+    pub fn new(n_rows: usize, n_cols: usize) -> Self {
+        // Make sure it fits in the allotted size
+        let total_bits = n_rows * n_cols;
+        let available_bits = W * (usize::BITS as usize);
+        assert!(
+            total_bits <= available_bits,
+            "The number of bits required by the board ({} * {}) exceeds the allocated storage ({} bits).",
+            n_rows,
+            n_cols,
+            available_bits
+        );
+
+        Self {
+            board: BitArray::default(),
+            n_rows,
+            n_cols,
+        }
+    }
+}
+
+impl<const W: usize> BitBoard for BitBoardStatic<W> {
     fn n_rows(&self) -> usize {
         self.n_rows
     }
@@ -60,58 +80,53 @@ impl BitBoard for BitBoardDyn {
         &self.board
     }
 
+    /// Performs a bitwise OR operation between two bitboards.
     fn or(&self, other: &impl BitBoard) -> Result<impl BitBoard, DimensionMismatch> {
-        if (self.n_rows != other.n_rows()) || (self.n_cols != other.n_cols()) {
+        if (self.n_rows() != other.n_rows()) || (self.n_cols() != other.n_cols()) {
             return Err(DimensionMismatch);
         }
-        let mut new_board = BitBoardDyn::new(self.n_rows, self.n_cols);
-        new_board.board = self.board.clone() | other.board().to_bitvec();
-        Ok(new_board)
+
+        let mut result = *self;
+        result.board_mut().bitor_assign(other.board());
+        Ok(result)
     }
 
+    /// Performs a bitwise AND operation between two bitboards.
     fn and(&self, other: &impl BitBoard) -> Result<impl BitBoard, DimensionMismatch> {
-        if (self.n_rows != other.n_rows()) || (self.n_cols != other.n_cols()) {
+        if (self.n_rows() != other.n_rows()) || (self.n_cols() != other.n_cols()) {
             return Err(DimensionMismatch);
         }
-        let mut new_board = BitBoardDyn::new(self.n_rows, self.n_cols);
-        new_board.board = self.board.clone() & other.board().to_bitvec();
-        Ok(new_board)
-    }
-}
 
-impl BitBoardDyn {
-    /// Create a new empty board with `n_rows` and `n_cols`.
-    pub fn new(n_rows: usize, n_cols: usize) -> Self {
-        BitBoardDyn {
-            board: bitvec![0; n_rows * n_cols],
-            n_rows,
-            n_cols,
-        }
+        let mut result = *self;
+        result.board_mut().bitand_assign(other.board());
+        Ok(result)
     }
 }
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
+
     use rstest::rstest;
 
     #[test]
     fn can_construct() {
-        let bb = BitBoardDyn::new(2, 2);
+        let bb = BitBoardStatic::<1>::new(2, 2);
         println!("{:?}", bb);
     }
 
     #[test]
     #[should_panic(expected = "row cannot be greater than n_rows")]
     fn row_too_big() {
-        let bb = BitBoardDyn::new(2, 2);
+        let bb = BitBoardStatic::<1>::new(2, 2);
         bb.index_of(10, 0);
     }
 
     #[test]
     #[should_panic(expected = "col cannot be greater than n_col")]
     fn col_too_big() {
-        let bb = BitBoardDyn::new(2, 2);
+        let bb = BitBoardStatic::<1>::new(2, 2);
         bb.index_of(0, 10);
     }
 
@@ -121,7 +136,8 @@ mod tests {
     #[case(1, 0, 2)]
     #[case(1, 1, 3)]
     fn index_of(#[case] row: usize, #[case] col: usize, #[case] expected: usize) {
-        let bb = BitBoardDyn::new(2, 2);
+        let bb = BitBoardStatic::<1>::new(2, 2);
+
         assert_eq!(expected, bb.index_of(row, col))
     }
 
@@ -132,7 +148,8 @@ mod tests {
     #[case(3, 0, 3)]
     #[case(4, 0, 4)]
     fn col_vec_index_of(#[case] row: usize, #[case] col: usize, #[case] expected: usize) {
-        let bb = BitBoardDyn::new(5, 1);
+        let bb = BitBoardStatic::<1>::new(5, 1);
+
         assert_eq!(expected, bb.index_of(row, col))
     }
 
@@ -143,7 +160,8 @@ mod tests {
     #[case(0, 3, 3)]
     #[case(0, 4, 4)]
     fn row_vec_index_of(#[case] row: usize, #[case] col: usize, #[case] expected: usize) {
-        let bb = BitBoardDyn::new(1, 5);
+        let bb = BitBoardStatic::<1>::new(1, 5);
+
         assert_eq!(expected, bb.index_of(row, col))
     }
 
@@ -154,8 +172,9 @@ mod tests {
     #[case(3)]
     #[case(4)]
     fn set_col(#[case] col: usize) {
-        let mut bb = BitBoardDyn::new(5, 5);
+        let mut bb = BitBoardStatic::<1>::new(5, 5);
         bb.set_col(col, true);
+
         for ridx in 0..bb.n_rows {
             for cidx in 0..bb.n_cols {
                 if cidx == col {
@@ -174,8 +193,9 @@ mod tests {
     #[case(3)]
     #[case(4)]
     fn set_row(#[case] row: usize) {
-        let mut bb = BitBoardDyn::new(5, 5);
+        let mut bb = BitBoardStatic::<1>::new(5, 5);
         bb.set_row(row, true);
+
         for ridx in 0..bb.n_rows {
             for cidx in 0..bb.n_cols {
                 if ridx == row {
@@ -192,8 +212,7 @@ mod tests {
         // Create the board
         let nr = 3;
         let nc = 3;
-        let mut bb = BitBoardDyn::new(nr, nc);
-
+        let mut bb = BitBoardStatic::<1>::new(nr, nc);
         bb.set(0, 0, true);
 
         // Set each bit, and check that all bits are 1
@@ -202,7 +221,8 @@ mod tests {
                 bb.set(ridx, cidx, true);
             }
         }
-        assert!(bb.board.all());
+
+        assert!(bb.board[..nr * nc].all());
 
         // Unset each bit, and check that all bits are 0
         for ridx in 0..nr {
@@ -210,68 +230,111 @@ mod tests {
                 bb.set(ridx, cidx, false);
             }
         }
-        assert!(bb.board.not_any());
+
+        assert!(bb.board[..nr * nc].not_any());
     }
 
     #[rstest]
-    #[case(0, 0, BitBoardDyn { board: bitvec![0, 1, 1, 0], n_rows: 2, n_cols: 2 })]
-    #[case(0, 1, BitBoardDyn { board: bitvec![1, 0, 0, 1], n_rows: 2, n_cols: 2 })]
-    #[case(1, 0, BitBoardDyn { board: bitvec![1, 0, 0, 1], n_rows: 2, n_cols: 2 })]
-    #[case(1, 1, BitBoardDyn { board: bitvec![0, 1, 1, 0], n_rows: 2, n_cols: 2 })]
+    #[case(0, 0, bitvec![0, 1, 1, 0])]
+    #[case(0, 1, bitvec![1, 0, 0, 1])]
+    #[case(1, 0, bitvec![1, 0, 0, 1])]
+    #[case(1, 1, bitvec![0, 1, 1, 0])]
     fn set_caridnal_neighbors_2x2(
         #[case] row: usize,
+
         #[case] col: usize,
-        #[case] expect: BitBoardDyn,
+
+        #[case] expect_bv: BitVec,
     ) {
-        let mut bb = BitBoardDyn::new(2, 2);
+        let mut bb = BitBoardStatic::<1>::new(2, 2);
         bb.set_cardinal_neighbors(row, col, true);
+
+        let mut expect_board = BitArray::<[usize; 1]>::default();
+        expect_board[..expect_bv.len()].copy_from_bitslice(&expect_bv);
+
+        let expect = BitBoardStatic::<1> {
+            board: expect_board,
+            n_rows: 2,
+            n_cols: 2,
+        };
+
         assert_eq!(expect, bb);
     }
 
     #[rstest]
-    #[case(0, 0, BitBoardDyn { board: bitvec![0, 1, 0, 1, 0, 0, 0, 0, 0], n_rows: 3, n_cols: 3 })]
-    #[case(0, 1, BitBoardDyn { board: bitvec![1, 0, 1, 0, 1, 0, 0, 0, 0], n_rows: 3, n_cols: 3 })]
-    #[case(0, 2, BitBoardDyn { board: bitvec![0, 1, 0, 0, 0, 1, 0, 0, 0], n_rows: 3, n_cols: 3 })]
-    #[case(1, 0, BitBoardDyn { board: bitvec![1, 0, 0, 0, 1, 0, 1, 0, 0], n_rows: 3, n_cols: 3 })]
-    #[case(1, 1, BitBoardDyn { board: bitvec![0, 1, 0, 1, 0, 1, 0, 1, 0], n_rows: 3, n_cols: 3 })]
-    #[case(1, 2, BitBoardDyn { board: bitvec![0, 0, 1, 0, 1, 0, 0, 0, 1], n_rows: 3, n_cols: 3 })]
-    #[case(2, 0, BitBoardDyn { board: bitvec![0, 0, 0, 1, 0, 0, 0, 1, 0], n_rows: 3, n_cols: 3 })]
-    #[case(2, 1, BitBoardDyn { board: bitvec![0, 0, 0, 0, 1, 0, 1, 0, 1], n_rows: 3, n_cols: 3 })]
-    #[case(2, 2, BitBoardDyn { board: bitvec![0, 0, 0, 0, 0, 1, 0, 1, 0], n_rows: 3, n_cols: 3 })]
+    #[case(0, 0, bitvec![0, 1, 0, 1, 0, 0, 0, 0, 0])]
+    #[case(0, 1, bitvec![1, 0, 1, 0, 1, 0, 0, 0, 0])]
+    #[case(0, 2, bitvec![0, 1, 0, 0, 0, 1, 0, 0, 0])]
+    #[case(1, 0, bitvec![1, 0, 0, 0, 1, 0, 1, 0, 0])]
+    #[case(1, 1, bitvec![0, 1, 0, 1, 0, 1, 0, 1, 0])]
+    #[case(1, 2, bitvec![0, 0, 1, 0, 1, 0, 0, 0, 1])]
+    #[case(2, 0, bitvec![0, 0, 0, 1, 0, 0, 0, 1, 0])]
+    #[case(2, 1, bitvec![0, 0, 0, 0, 1, 0, 1, 0, 1])]
+    #[case(2, 2, bitvec![0, 0, 0, 0, 0, 1, 0, 1, 0])]
     fn set_caridnal_neighbors_3x3(
         #[case] row: usize,
         #[case] col: usize,
-        #[case] expect: BitBoardDyn,
+        #[case] expect_bv: BitVec,
     ) {
-        let mut bb = BitBoardDyn::new(3, 3);
+        let mut bb = BitBoardStatic::<1>::new(3, 3);
         bb.set_cardinal_neighbors(row, col, true);
+
+        let mut expect_board = BitArray::<[usize; 1]>::default();
+        expect_board[..expect_bv.len()].copy_from_bitslice(&expect_bv);
+
+        let expect = BitBoardStatic::<1> {
+            board: expect_board,
+            n_rows: 3,
+            n_cols: 3,
+        };
+
         assert_eq!(expect, bb);
     }
 
     #[rstest]
-    #[case(0, 0, BitBoardDyn { board: bitvec![0, 1, 1, 1], n_rows: 2, n_cols: 2 })]
-    #[case(0, 1, BitBoardDyn { board: bitvec![1, 0, 1, 1], n_rows: 2, n_cols: 2 })]
-    #[case(1, 0, BitBoardDyn { board: bitvec![1, 1, 0, 1], n_rows: 2, n_cols: 2 })]
-    #[case(1, 1, BitBoardDyn { board: bitvec![1, 1, 1, 0], n_rows: 2, n_cols: 2 })]
-    fn set_all_neighbors_2x2(#[case] row: usize, #[case] col: usize, #[case] expect: BitBoardDyn) {
-        let mut bb = BitBoardDyn::new(2, 2);
+    #[case(0, 0, bitvec![0, 1, 1, 1])]
+    #[case(0, 1, bitvec![1, 0, 1, 1])]
+    #[case(1, 0, bitvec![1, 1, 0, 1])]
+    #[case(1, 1, bitvec![1, 1, 1, 0])]
+    fn set_all_neighbors_2x2(#[case] row: usize, #[case] col: usize, #[case] expect_bv: BitVec) {
+        let mut bb = BitBoardStatic::<1>::new(2, 2);
         bb.set_all_neighbors(row, col, true);
+
+        let mut expect_board = BitArray::<[usize; 1]>::default();
+        expect_board[..expect_bv.len()].copy_from_bitslice(&expect_bv);
+
+        let expect = BitBoardStatic::<1> {
+            board: expect_board,
+            n_rows: 2,
+            n_cols: 2,
+        };
+
         assert_eq!(expect, bb);
     }
 
     #[rstest]
-    #[case(0, 0, BitBoardDyn { board: bitvec![0, 1, 0, 1, 1, 0, 0, 0, 0], n_rows: 3, n_cols: 3 })]
-    #[case(0, 1, BitBoardDyn { board: bitvec![1, 0, 1, 1, 1, 1, 0, 0, 0], n_rows: 3, n_cols: 3 })]
-    #[case(0, 2, BitBoardDyn { board: bitvec![0, 1, 0, 0, 1, 1, 0, 0, 0], n_rows: 3, n_cols: 3 })]
-    #[case(1, 0, BitBoardDyn { board: bitvec![1, 1, 0, 0, 1, 0, 1, 1, 0], n_rows: 3, n_cols: 3 })]
-    #[case(1, 1, BitBoardDyn { board: bitvec![1, 1, 1, 1, 0, 1, 1, 1, 1], n_rows: 3, n_cols: 3 })]
-    #[case(1, 2, BitBoardDyn { board: bitvec![0, 1, 1, 0, 1, 0, 0, 1, 1], n_rows: 3, n_cols: 3 })]
-    #[case(2, 0, BitBoardDyn { board: bitvec![0, 0, 0, 1, 1, 0, 0, 1, 0], n_rows: 3, n_cols: 3 })]
-    #[case(2, 1, BitBoardDyn { board: bitvec![0, 0, 0, 1, 1, 1, 1, 0, 1], n_rows: 3, n_cols: 3 })]
-    #[case(2, 2, BitBoardDyn { board: bitvec![0, 0, 0, 0, 1, 1, 0, 1, 0], n_rows: 3, n_cols: 3 })]
-    fn set_all_neighbors_3x3(#[case] row: usize, #[case] col: usize, #[case] expect: BitBoardDyn) {
-        let mut bb = BitBoardDyn::new(3, 3);
+    #[case(0, 0, bitvec![0, 1, 0, 1, 1, 0, 0, 0, 0])]
+    #[case(0, 1, bitvec![1, 0, 1, 1, 1, 1, 0, 0, 0])]
+    #[case(0, 2, bitvec![0, 1, 0, 0, 1, 1, 0, 0, 0])]
+    #[case(1, 0, bitvec![1, 1, 0, 0, 1, 0, 1, 1, 0])]
+    #[case(1, 1, bitvec![1, 1, 1, 1, 0, 1, 1, 1, 1])]
+    #[case(1, 2, bitvec![0, 1, 1, 0, 1, 0, 0, 1, 1])]
+    #[case(2, 0, bitvec![0, 0, 0, 1, 1, 0, 0, 1, 0])]
+    #[case(2, 1, bitvec![0, 0, 0, 1, 1, 1, 1, 0, 1])]
+    #[case(2, 2, bitvec![0, 0, 0, 0, 1, 1, 0, 1, 0])]
+    fn set_all_neighbors_3x3(#[case] row: usize, #[case] col: usize, #[case] expect_bv: BitVec) {
+        let mut bb = BitBoardStatic::<1>::new(3, 3);
         bb.set_all_neighbors(row, col, true);
+
+        let mut expect_board = BitArray::<[usize; 1]>::default();
+        expect_board[..expect_bv.len()].copy_from_bitslice(&expect_bv);
+
+        let expect = BitBoardStatic::<1> {
+            board: expect_board,
+            n_rows: 3,
+            n_cols: 3,
+        };
+
         assert_eq!(expect, bb);
     }
 
@@ -285,8 +348,8 @@ mod tests {
         #[case] b2r: usize,
         #[case] b2c: usize,
     ) {
-        let bb1 = BitBoardDyn::new(b1r, b1c);
-        let bb8 = BitBoardDyn::new(b2r, b2c);
+        let bb1 = BitBoardStatic::<1>::new(b1r, b1c);
+        let bb8 = BitBoardStatic::<1>::new(b2r, b2c);
         assert!(bb1.and(&bb8).is_err());
     }
 
@@ -300,8 +363,8 @@ mod tests {
         #[case] b2r: usize,
         #[case] b2c: usize,
     ) {
-        let bb1 = BitBoardDyn::new(b1r, b1c);
-        let bb8 = BitBoardDyn::new(b2r, b2c);
+        let bb1 = BitBoardStatic::<1>::new(b1r, b1c);
+        let bb8 = BitBoardStatic::<1>::new(b2r, b2c);
         assert!(bb1.or(&bb8).is_err());
     }
 
@@ -312,20 +375,30 @@ mod tests {
     #[case(bitvec![1, 1, 1, 1], bitvec![1, 0, 0, 1], bitvec![1, 0, 0, 1])] // full AND partial
     #[case(bitvec![1, 0, 1, 0], bitvec![0, 1, 0, 1], bitvec![0, 0, 0, 0])] // alternating patterns
     #[case(bitvec![1, 1, 0, 0], bitvec![1, 0, 1, 0], bitvec![1, 0, 0, 0])] // partial patterns
-    fn and_operations(#[case] board1: BitVec, #[case] board2: BitVec, #[case] expected: BitVec) {
-        let bb1 = BitBoardDyn {
-            board: board1,
+    fn and_operations(
+        #[case] board1_bv: BitVec,
+        #[case] board2_bv: BitVec,
+        #[case] expected: BitVec,
+    ) {
+        let mut board1_arr = BitArray::<[usize; 1]>::default();
+        board1_arr[..board1_bv.len()].copy_from_bitslice(&board1_bv);
+        let bb1 = BitBoardStatic::<1> {
+            board: board1_arr,
             n_rows: 2,
             n_cols: 2,
         };
-        let bb2 = BitBoardDyn {
-            board: board2,
+
+        let mut board2_arr = BitArray::<[usize; 1]>::default();
+        board2_arr[..board2_bv.len()].copy_from_bitslice(&board2_bv);
+
+        let bb2 = BitBoardStatic::<1> {
+            board: board2_arr,
             n_rows: 2,
             n_cols: 2,
         };
 
         let result = bb1.and(&bb2).unwrap();
-        assert_eq!(result.board().to_bitvec(), expected);
+        assert_eq!(result.board()[..expected.len()].to_bitvec(), expected);
         assert_eq!(result.n_rows(), 2);
         assert_eq!(result.n_cols(), 2);
     }
@@ -338,35 +411,48 @@ mod tests {
     #[case(bitvec![1, 0, 1, 0], bitvec![0, 1, 0, 1], bitvec![1, 1, 1, 1])] // alternating patterns
     #[case(bitvec![1, 1, 0, 0], bitvec![0, 0, 1, 1], bitvec![1, 1, 1, 1])] // complementary patterns
     #[case(bitvec![1, 0, 0, 1], bitvec![0, 1, 1, 0], bitvec![1, 1, 1, 1])] // diagonal patterns
-    fn or_operations(#[case] board1: BitVec, #[case] board2: BitVec, #[case] expected: BitVec) {
-        let bb1 = BitBoardDyn {
-            board: board1,
+    fn or_operations(
+        #[case] board1_bv: BitVec,
+
+        #[case] board2_bv: BitVec,
+
+        #[case] expected: BitVec,
+    ) {
+        let mut board1_arr = BitArray::<[usize; 1]>::default();
+        board1_arr[..board1_bv.len()].copy_from_bitslice(&board1_bv);
+
+        let bb1 = BitBoardStatic::<1> {
+            board: board1_arr,
             n_rows: 2,
             n_cols: 2,
         };
-        let bb2 = BitBoardDyn {
-            board: board2,
+
+        let mut board2_arr = BitArray::<[usize; 1]>::default();
+        board2_arr[..board2_bv.len()].copy_from_bitslice(&board2_bv);
+        let bb2 = BitBoardStatic::<1> {
+            board: board2_arr,
             n_rows: 2,
             n_cols: 2,
         };
 
         let result = bb1.or(&bb2).unwrap();
-        assert_eq!(result.board().to_bitvec(), expected);
+        assert_eq!(result.board()[..expected.len()].to_bitvec(), expected);
         assert_eq!(result.n_rows(), 2);
         assert_eq!(result.n_cols(), 2);
     }
 
     #[test]
     fn and_or_larger_boards() {
-        let mut bb1 = BitBoardDyn::new(3, 3);
+        let mut bb1 = BitBoardStatic::<1>::new(3, 3);
         bb1.set_row(0, true); // First row all true
         bb1.set(2, 2, true); // Bottom right corner
 
-        let mut bb2 = BitBoardDyn::new(3, 3);
+        let mut bb2 = BitBoardStatic::<1>::new(3, 3);
         bb2.set_col(0, true); // First column all true
         bb2.set(1, 1, true); // Center
 
         // Test AND operation
+
         let and_result = bb1.and(&bb2).unwrap();
         assert!(and_result.board()[0]); // (0,0) - both have true
         assert!(!and_result.board()[1]); // (0,1) - only bb1 has true
@@ -376,6 +462,7 @@ mod tests {
         assert!(!and_result.board()[6]); // (2,0) - only bb2 has true
 
         // Test OR operation
+
         let or_result = bb1.or(&bb2).unwrap();
         assert!(or_result.board()[0]); // (0,0) - both have true
         assert!(or_result.board()[1]); // (0,1) - bb1 has true
@@ -390,13 +477,13 @@ mod tests {
 
     #[test]
     fn and_or_preserve_original_boards() {
-        let mut bb1 = BitBoardDyn::new(2, 2);
+        let mut bb1 = BitBoardStatic::<1>::new(2, 2);
         bb1.set(0, 0, true);
-        let bb1_original = bb1.clone();
+        let bb1_original = bb1;
 
-        let mut bb2 = BitBoardDyn::new(2, 2);
+        let mut bb2 = BitBoardStatic::<1>::new(2, 2);
         bb2.set(1, 1, true);
-        let bb2_original = bb2.clone();
+        let bb2_original = bb2;
 
         // Perform operations
         let _and_result = bb1.and(&bb2).unwrap();
