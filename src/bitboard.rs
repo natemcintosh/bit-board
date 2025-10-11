@@ -28,6 +28,13 @@ pub trait BitBoard: Sized {
         (row * self.n_cols()) + col
     }
 
+    /// Get the row and column of the linear index
+    fn row_col_of(&self, index: usize) -> (usize, usize) {
+        let row = index / self.n_cols();
+        let col = index % self.n_cols();
+        (row, col)
+    }
+
     /// Set all bits to the desired value.
     fn fill(&mut self, value: bool) {
         self.board_mut().fill(value);
@@ -114,5 +121,47 @@ pub trait BitBoard: Sized {
     fn set_all_neighbors(&mut self, row: usize, col: usize, value: bool) {
         self.set_cardinal_neighbors(row, col, value);
         self.set_diagonals(row, col, value);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{bitboard::BitBoard, bitboardstatic::BitBoardStatic};
+    use rstest::rstest;
+
+    #[rstest]
+    #[case(0, 0, 0)]
+    #[case(1, 0, 1)]
+    #[case(2, 1, 0)]
+    #[case(3, 1, 1)]
+    fn index_of_and_row_col_of(#[case] index: usize, #[case] row: usize, #[case] col: usize) {
+        let bb = BitBoardStatic::<1>::new(2, 2);
+        assert_eq!(bb.index_of(row, col), index);
+        assert_eq!(bb.row_col_of(index), (row, col));
+    }
+
+    #[rstest]
+    #[case(0, 0, 0)]
+    #[case(1, 0, 1)]
+    #[case(2, 0, 2)]
+    #[case(3, 1, 0)]
+    #[case(4, 1, 1)]
+    #[case(5, 1, 2)]
+    #[case(6, 2, 0)]
+    #[case(7, 2, 1)]
+    #[case(8, 2, 2)]
+    fn index_of_and_row_col_of_3x3(#[case] index: usize, #[case] row: usize, #[case] col: usize) {
+        let bb = BitBoardStatic::<1>::new(3, 3);
+        assert_eq!(bb.index_of(row, col), index);
+        assert_eq!(bb.row_col_of(index), (row, col));
+    }
+
+    #[test]
+    fn index_of_and_row_col_of_2x10() {
+        let bb = BitBoardStatic::<1>::new(2, 10);
+        for index in 0..20 {
+            let (row, col) = bb.row_col_of(index);
+            assert_eq!(bb.index_of(row, col), index);
+        }
     }
 }
