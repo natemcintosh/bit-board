@@ -1,6 +1,6 @@
 [package]
 name = "bit-board"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2024"
 description = "A lightweight wrapper over bitvec for 2D bit array operations"
 license = "MIT"
