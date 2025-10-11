@@ -81,7 +81,7 @@ impl<const W: usize> BitBoard for BitBoardStatic<W> {
     }
 
     /// Performs a bitwise OR operation between two bitboards.
-    fn or(&self, other: &impl BitBoard) -> Result<impl BitBoard, DimensionMismatch> {
+    fn or(&self, other: &impl BitBoard) -> Result<Self, DimensionMismatch> {
         if (self.n_rows() != other.n_rows()) || (self.n_cols() != other.n_cols()) {
             return Err(DimensionMismatch);
         }
@@ -92,7 +92,7 @@ impl<const W: usize> BitBoard for BitBoardStatic<W> {
     }
 
     /// Performs a bitwise AND operation between two bitboards.
-    fn and(&self, other: &impl BitBoard) -> Result<impl BitBoard, DimensionMismatch> {
+    fn and(&self, other: &impl BitBoard) -> Result<Self, DimensionMismatch> {
         if (self.n_rows() != other.n_rows()) || (self.n_cols() != other.n_cols()) {
             return Err(DimensionMismatch);
         }

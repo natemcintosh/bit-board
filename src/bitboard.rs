@@ -2,7 +2,7 @@ use bitvec::slice::BitSlice;
 
 use crate::DimensionMismatch;
 
-pub trait BitBoard {
+pub trait BitBoard: Sized {
     /// Returns the number of rows in the board.
     fn n_rows(&self) -> usize;
 
@@ -33,8 +33,8 @@ pub trait BitBoard {
         self.board_mut().fill(value);
     }
 
-    fn or(&self, other: &impl BitBoard) -> Result<impl BitBoard, DimensionMismatch>;
-    fn and(&self, other: &impl BitBoard) -> Result<impl BitBoard, DimensionMismatch>;
+    fn or(&self, other: &impl BitBoard) -> Result<Self, DimensionMismatch>;
+    fn and(&self, other: &impl BitBoard) -> Result<Self, DimensionMismatch>;
 
     /// Set the value at index [row, col] to be the `new_val`.
     fn set(&mut self, row: usize, col: usize, value: bool) {

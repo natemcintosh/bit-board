@@ -60,7 +60,7 @@ impl BitBoard for BitBoardDyn {
         &self.board
     }
 
-    fn or(&self, other: &impl BitBoard) -> Result<impl BitBoard, DimensionMismatch> {
+    fn or(&self, other: &impl BitBoard) -> Result<Self, DimensionMismatch> {
         if (self.n_rows != other.n_rows()) || (self.n_cols != other.n_cols()) {
             return Err(DimensionMismatch);
         }
@@ -69,7 +69,7 @@ impl BitBoard for BitBoardDyn {
         Ok(new_board)
     }
 
-    fn and(&self, other: &impl BitBoard) -> Result<impl BitBoard, DimensionMismatch> {
+    fn and(&self, other: &impl BitBoard) -> Result<Self, DimensionMismatch> {
         if (self.n_rows != other.n_rows()) || (self.n_cols != other.n_cols()) {
             return Err(DimensionMismatch);
         }
