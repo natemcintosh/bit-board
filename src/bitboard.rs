@@ -48,6 +48,16 @@ pub trait BitBoard: Sized {
         let new_ind = self.index_of(row, col);
         self.board_mut().set(new_ind, value);
     }
+
+    /// Get the value at index [row, col]. If the index is out of bounds, return false.
+    fn get(&self, row: usize, col: usize) -> bool {
+        if row >= self.n_rows() || col >= self.n_cols() {
+            return false;
+        }
+        let new_ind = self.index_of(row, col);
+        *self.board().get(new_ind).as_deref().unwrap_or(&false)
+    }
+
     /// Set an entire column to a certain value
     fn set_col(&mut self, col: usize, value: bool) {
         // For each row
@@ -58,6 +68,11 @@ pub trait BitBoard: Sized {
         }
     }
 
+    /// Get the values in a given col
+    fn get_col(&self, col: usize) -> impl Iterator<Item = bool> {
+        (0..self.n_rows()).map(move |row| self.get(row, col))
+    }
+
     /// Set an entire row to a certain value
     fn set_row(&mut self, row: usize, value: bool) {
         // For each column in the row
@@ -66,6 +81,11 @@ pub trait BitBoard: Sized {
             let idx = (row * self.n_cols()) + cidx;
             self.board_mut().set(idx, value);
         }
+    }
+
+    /// Get the values in a given row
+    fn get_row(&self, row: usize) -> impl Iterator<Item = bool> {
+        (0..self.n_cols()).map(move |col| self.get(row, col))
     }
 
     /// Will set the neighbors immediately above, below, left, and right to `value`. If
@@ -163,5 +183,52 @@ mod tests {
             let (row, col) = bb.row_col_of(index);
             assert_eq!(bb.index_of(row, col), index);
         }
+    }
+
+    #[rstest]
+    #[case(0, 0, false)]
+    #[case(0, 1, true)]
+    #[case(1, 0, false)]
+    #[case(1, 1, false)]
+    #[case(2, 0, false)]
+    #[case(0, 2, false)]
+    #[case(2, 2, false)]
+    fn get_2x2(#[case] row: usize, #[case] col: usize, #[case] expected: bool) {
+        let mut bb = BitBoardStatic::<1>::new(2, 2);
+        bb.set(0, 1, true);
+        assert_eq!(bb.get(row, col), expected);
+    }
+
+    #[rstest]
+    #[case(0, vec![true, false, true])]
+    #[case(1, vec![false, true, false])]
+    #[case(2, vec![true, true, true])]
+    #[case(3, vec![false, false, false])]
+    #[case(4, vec![false, false, false])]
+    fn get_row_3x3(#[case] row: usize, #[case] expected: Vec<bool>) {
+        let mut bb = BitBoardStatic::<1>::new(3, 3);
+        bb.set(0, 0, true);
+        bb.set(0, 2, true);
+        bb.set(1, 1, true);
+        bb.set_row(2, true);
+
+        assert_eq!(bb.get_row(row).collect::<Vec<bool>>(), expected);
+    }
+
+    #[rstest]
+    #[case(0, vec![true, false, true])]
+    #[case(1, vec![false, true, true])]
+    #[case(2, vec![true, false, true])]
+    #[case(3, vec![false, false, false])]
+    fn get_col_3x3(#[case] col: usize, #[case] expected: Vec<bool>) {
+        let mut bb = BitBoardStatic::<1>::new(3, 3);
+        bb.set(0, 0, true);
+        bb.set(0, 2, true);
+        bb.set(1, 1, true);
+        bb.set(2, 0, true);
+        bb.set(2, 1, true);
+        bb.set(2, 2, true);
+
+        assert_eq!(bb.get_col(col).collect::<Vec<bool>>(), expected);
     }
 }
