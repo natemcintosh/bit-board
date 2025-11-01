@@ -48,6 +48,13 @@ pub trait BitBoard: Sized {
         let new_ind = self.index_of(row, col);
         self.board_mut().set(new_ind, value);
     }
+
+    /// Get the value at index [row, col]. If the index is out of bounds, return false.
+    fn get(&self, row: usize, col: usize) -> bool {
+        let new_ind = self.index_of(row, col);
+        *self.board().get(new_ind).as_deref().unwrap_or(&false)
+    }
+
     /// Set an entire column to a certain value
     fn set_col(&mut self, col: usize, value: bool) {
         // For each row
@@ -58,6 +65,11 @@ pub trait BitBoard: Sized {
         }
     }
 
+    /// Get the values in a given col
+    fn get_col(&self, col: usize) -> impl Iterator<Item = bool> {
+        (0..self.n_rows()).map(move |row| self.get(row, col))
+    }
+
     /// Set an entire row to a certain value
     fn set_row(&mut self, row: usize, value: bool) {
         // For each column in the row
@@ -66,6 +78,11 @@ pub trait BitBoard: Sized {
             let idx = (row * self.n_cols()) + cidx;
             self.board_mut().set(idx, value);
         }
+    }
+
+    /// Get the values in a given row
+    fn get_row(&self, row: usize) -> impl Iterator<Item = bool> {
+        (0..self.n_cols()).map(move |col| self.get(row, col))
     }
 
     /// Will set the neighbors immediately above, below, left, and right to `value`. If
