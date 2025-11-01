@@ -40,7 +40,18 @@ pub trait BitBoard: Sized {
         self.board_mut().fill(value);
     }
 
+    /// Returns a new board with the logical OR of the two boards.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the two boards have different dimensions.
     fn or(&self, other: &impl BitBoard) -> Result<Self, DimensionMismatch>;
+
+    /// Returns a new board with the logical AND of the two boards.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the two boards have different dimensions.
     fn and(&self, other: &impl BitBoard) -> Result<Self, DimensionMismatch>;
 
     /// Set the value at index [row, col] to be the `new_val`.
