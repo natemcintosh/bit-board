@@ -28,12 +28,12 @@ impl<const W: usize> fmt::Display for BitBoardStatic<W> {
 
         for row in 0..self.n_rows {
             // row index, right-aligned to 2 spaces
-            write!(f, "{:>2} ", row)?;
+            write!(f, "{row:>2} ")?;
             for col in 0..self.n_cols {
                 let idx = row * self.n_cols + col;
                 let bit = self.board[idx];
                 let c = if bit { 'X' } else { '.' };
-                write!(f, "{}", c)?;
+                write!(f, "{c}")?;
             }
             writeln!(f)?;
         }
@@ -43,16 +43,17 @@ impl<const W: usize> fmt::Display for BitBoardStatic<W> {
 
 // W is the number of usize integers needed to hold the board
 impl<const W: usize> BitBoardStatic<W> {
+    /// # Panics
+    ///
+    /// This function will panic if the number of bits required by the board (`n_rows` * `n_cols`) exceeds the allocated storage (W * `usize::BITS`).
+    #[must_use]
     pub fn new(n_rows: usize, n_cols: usize) -> Self {
         // Make sure it fits in the allotted size
         let total_bits = n_rows * n_cols;
         let available_bits = W * (usize::BITS as usize);
         assert!(
             total_bits <= available_bits,
-            "The number of bits required by the board ({} * {}) exceeds the allocated storage ({} bits).",
-            n_rows,
-            n_cols,
-            available_bits
+            "The number of bits required by the board ({n_rows} * {n_cols}) exceeds the allocated storage ({available_bits} bits)."
         );
 
         Self {

@@ -4,7 +4,7 @@ use bitvec::prelude::*;
 
 use crate::{DimensionMismatch, bitboard::BitBoard};
 
-/// BitBoard is a 2D array of booleans, stored in the bits of integers. It does
+/// `BitBoard` is a 2D array of booleans, stored in the bits of integers. It does
 /// assumes that the boundaries are hard, and going past a boundary does *not* take
 /// you back to the other side.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -30,12 +30,12 @@ impl fmt::Display for BitBoardDyn {
 
         for row in 0..self.n_rows {
             // row index, right-aligned to 2 spaces
-            write!(f, "{:>2} ", row)?;
+            write!(f, "{row:>2} ")?;
             for col in 0..self.n_cols {
                 let idx = row * self.n_cols + col;
                 let bit = self.board[idx];
                 let c = if bit { 'X' } else { '.' };
-                write!(f, "{}", c)?;
+                write!(f, "{c}")?;
             }
             writeln!(f)?;
         }
@@ -81,6 +81,7 @@ impl BitBoard for BitBoardDyn {
 
 impl BitBoardDyn {
     /// Create a new empty board with `n_rows` and `n_cols`.
+    #[must_use]
     pub fn new(n_rows: usize, n_cols: usize) -> Self {
         BitBoardDyn {
             board: bitvec![0; n_rows * n_cols],
