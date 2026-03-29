@@ -10,13 +10,13 @@ use crate::{DimensionMismatch, bitboard::BitBoard};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BitBoardDyn {
     /// The slice of bits that represent the board.
-    pub board: BitVec,
+    board: BitVec,
 
     /// How many rows does the board have
-    pub n_rows: usize,
+    n_rows: usize,
 
     /// How many columns does the board have
-    pub n_cols: usize,
+    n_cols: usize,
 }
 
 impl fmt::Display for BitBoardDyn {
@@ -60,7 +60,7 @@ impl BitBoard for BitBoardDyn {
         &self.board
     }
 
-    fn or(&self, other: &impl BitBoard) -> Result<Self, DimensionMismatch> {
+    fn or(&self, other: &Self) -> Result<Self, DimensionMismatch> {
         if (self.n_rows != other.n_rows()) || (self.n_cols != other.n_cols()) {
             return Err(DimensionMismatch);
         }
@@ -69,7 +69,7 @@ impl BitBoard for BitBoardDyn {
         Ok(new_board)
     }
 
-    fn and(&self, other: &impl BitBoard) -> Result<Self, DimensionMismatch> {
+    fn and(&self, other: &Self) -> Result<Self, DimensionMismatch> {
         if (self.n_rows != other.n_rows()) || (self.n_cols != other.n_cols()) {
             return Err(DimensionMismatch);
         }
@@ -83,11 +83,35 @@ impl BitBoardDyn {
     /// Create a new empty board with `n_rows` and `n_cols`.
     #[must_use]
     pub fn new(n_rows: usize, n_cols: usize) -> Self {
+        assert!(
+            n_rows > 0 && n_cols > 0,
+            "Board must have at least 1 row and 1 column"
+        );
         BitBoardDyn {
             board: bitvec![0; n_rows * n_cols],
             n_rows,
             n_cols,
         }
+    }
+
+    /// Create a board from pre-existing data.
+    ///
+    /// # Errors
+    ///
+    /// Returns `DimensionMismatch` if `board.len() != n_rows * n_cols`.
+    pub fn from_raw(
+        n_rows: usize,
+        n_cols: usize,
+        board: BitVec,
+    ) -> Result<Self, DimensionMismatch> {
+        if n_rows == 0 || n_cols == 0 || board.len() != n_rows * n_cols {
+            return Err(DimensionMismatch);
+        }
+        Ok(BitBoardDyn {
+            board,
+            n_rows,
+            n_cols,
+        })
     }
 }
 
@@ -100,6 +124,24 @@ mod tests {
     fn can_construct() {
         let bb = BitBoardDyn::new(2, 2);
         println!("{:?}", bb);
+    }
+
+    #[test]
+    #[should_panic(expected = "Board must have at least 1 row and 1 column")]
+    fn zero_rows_panics() {
+        BitBoardDyn::new(0, 3);
+    }
+
+    #[test]
+    #[should_panic(expected = "Board must have at least 1 row and 1 column")]
+    fn zero_cols_panics() {
+        BitBoardDyn::new(3, 0);
+    }
+
+    #[test]
+    #[should_panic(expected = "Board must have at least 1 row and 1 column")]
+    fn zero_both_panics() {
+        BitBoardDyn::new(0, 0);
     }
 
     #[test]

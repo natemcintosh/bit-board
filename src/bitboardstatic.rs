@@ -11,10 +11,10 @@ pub struct BitBoardStatic<const W: usize> {
     board: BitArray<[usize; W]>,
 
     /// How many rows does the board have
-    pub n_rows: usize,
+    n_rows: usize,
 
     /// How many columns does the board have
-    pub n_cols: usize,
+    n_cols: usize,
 }
 
 impl<const W: usize> fmt::Display for BitBoardStatic<W> {
@@ -48,6 +48,10 @@ impl<const W: usize> BitBoardStatic<W> {
     /// This function will panic if the number of bits required by the board (`n_rows` * `n_cols`) exceeds the allocated storage (W * `usize::BITS`).
     #[must_use]
     pub fn new(n_rows: usize, n_cols: usize) -> Self {
+        assert!(
+            n_rows > 0 && n_cols > 0,
+            "Board must have at least 1 row and 1 column"
+        );
         // Make sure it fits in the allotted size
         let total_bits = n_rows * n_cols;
         let available_bits = W * (usize::BITS as usize);
@@ -61,6 +65,28 @@ impl<const W: usize> BitBoardStatic<W> {
             n_rows,
             n_cols,
         }
+    }
+
+    /// Create a board from pre-existing data.
+    ///
+    /// # Errors
+    ///
+    /// Returns `DimensionMismatch` if `n_rows * n_cols` exceeds the storage capacity.
+    pub fn from_raw(
+        n_rows: usize,
+        n_cols: usize,
+        board: BitArray<[usize; W]>,
+    ) -> Result<Self, DimensionMismatch> {
+        let total_bits = n_rows * n_cols;
+        let available_bits = W * (usize::BITS as usize);
+        if n_rows == 0 || n_cols == 0 || total_bits > available_bits {
+            return Err(DimensionMismatch);
+        }
+        Ok(Self {
+            board,
+            n_rows,
+            n_cols,
+        })
     }
 }
 
@@ -82,7 +108,7 @@ impl<const W: usize> BitBoard for BitBoardStatic<W> {
     }
 
     /// Performs a bitwise OR operation between two bitboards.
-    fn or(&self, other: &impl BitBoard) -> Result<Self, DimensionMismatch> {
+    fn or(&self, other: &Self) -> Result<Self, DimensionMismatch> {
         if (self.n_rows() != other.n_rows()) || (self.n_cols() != other.n_cols()) {
             return Err(DimensionMismatch);
         }
@@ -93,7 +119,7 @@ impl<const W: usize> BitBoard for BitBoardStatic<W> {
     }
 
     /// Performs a bitwise AND operation between two bitboards.
-    fn and(&self, other: &impl BitBoard) -> Result<Self, DimensionMismatch> {
+    fn and(&self, other: &Self) -> Result<Self, DimensionMismatch> {
         if (self.n_rows() != other.n_rows()) || (self.n_cols() != other.n_cols()) {
             return Err(DimensionMismatch);
         }
@@ -115,6 +141,24 @@ mod tests {
     fn can_construct() {
         let bb = BitBoardStatic::<1>::new(2, 2);
         println!("{:?}", bb);
+    }
+
+    #[test]
+    #[should_panic(expected = "Board must have at least 1 row and 1 column")]
+    fn zero_rows_panics() {
+        BitBoardStatic::<1>::new(0, 3);
+    }
+
+    #[test]
+    #[should_panic(expected = "Board must have at least 1 row and 1 column")]
+    fn zero_cols_panics() {
+        BitBoardStatic::<1>::new(3, 0);
+    }
+
+    #[test]
+    #[should_panic(expected = "Board must have at least 1 row and 1 column")]
+    fn zero_both_panics() {
+        BitBoardStatic::<1>::new(0, 0);
     }
 
     #[test]
